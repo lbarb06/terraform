@@ -1,0 +1,16 @@
+aws_region                   = "us-east-1"
+aws_profile                  = "admin"
+project_name                 = "project1-gitops"
+environment                  = "main"
+project_4_state_bucket       = "project4-tfstate-example"
+project_4_state_key          = "project4/main/terraform.tfstate"
+project_4_state_region       = "us-east-1"
+argocd_namespace             = "argocd"
+argocd_chart_version         = "7.7.16"
+create_ingress               = false
+# argocd_hostname            = "argocd.example.com"
+bootstrap_application        = false
+# gitops_repo_url            = "https://github.com/org/repo.git"
+gitops_repo_branch           = "main"
+gitops_app_path              = "terraform/03-gitops-argocd/gitops/apps/project1"
+gitops_destination_namespace = "project1"

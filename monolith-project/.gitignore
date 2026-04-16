@@ -1,0 +1,34 @@
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/*.tfstate
+**/*.tfstate.backup
+**/backend.hcl
+**/terraform.tfvars
+
+apps/webapp/node_modules/
+apps/webapp/test-results/
+apps/webapp/playwright-report/
+
+# Terraform local artifacts
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+plan.out
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+terraform.tfvars
+*.auto.tfvars
+backend.hcl
+
+# Local helper scripts
+**/runbook.sh
+
+node_modules/

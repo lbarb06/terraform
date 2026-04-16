@@ -1,0 +1,152 @@
+name: Webapp CI/CD
+
+on:
+  pull_request:
+    paths:
+      - "apps/webapp/**"
+      - ".github/workflows/webapp-cicd.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/webapp/**"
+      - ".github/workflows/webapp-cicd.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/webapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run UI tests
+        run: npm run test:ui
+
+  build_and_gitops:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          ECR_REPOSITORY_URL: ${{ secrets.ECR_REPOSITORY_URL }}
+        run: |
+          if ! echo "${GITHUB_SHA}" | grep -Eq "^[0-9a-f]{40}$"; then
+            echo "GITHUB_SHA is not a full 40-char SHA"
+            exit 1
+          fi
+
+          IMAGE_TAG="${GITHUB_SHA}"
+          IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+
+          if ! echo "${IMAGE_URI}" | grep -Eq ":[0-9a-f]{40}$"; then
+            echo "Refusing non-SHA image tag: ${IMAGE_URI}"
+            exit 1
+          fi
+
+          docker build --build-arg GIT_SHA="${GITHUB_SHA}" -t "${IMAGE_URI}" ./apps/webapp
+          docker push "${IMAGE_URI}"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+      - name: Update GitOps manifest
+        run: |
+          sed -i.bak "s|image: .*|image: ${IMAGE_URI}|g" "terraform/03-gitops-argocd/gitops/apps/project1/deployment.yaml"
+          rm -f "terraform/03-gitops-argocd/gitops/apps/project1/deployment.yaml.bak"
+
+      - name: Commit and push GitOps change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "terraform/03-gitops-argocd/gitops/apps/project1/deployment.yaml"
+          if git diff --cached --quiet; then
+            echo "No manifest change to commit"
+            exit 0
+          fi
+          git commit -m "chore(gitops): deploy webapp image ${GITHUB_SHA}"
+          git push
+
+  deployed_ui_test:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.RUN_DEPLOYED_UI_TESTS == 'true' }}
+    needs: build_and_gitops
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/webapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for deployment rollout and version match
+        env:
+          BASE_URL: ${{ secrets.WEBAPP_BASE_URL }}
+          EXPECTED_VERSION: ${{ github.sha }}
+        run: |
+          if [ -z "${BASE_URL}" ]; then
+            echo "WEBAPP_BASE_URL secret is required when RUN_DEPLOYED_UI_TESTS=true"
+            exit 1
+          fi
+
+          for i in $(seq 1 30); do
+            if curl -fsS "${BASE_URL}/health" >/dev/null; then
+              VERSION=$(curl -fsS "${BASE_URL}/version" | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{process.stdout.write(JSON.parse(d).version||"")}catch{process.exit(1)}})')
+              if [ "${VERSION}" = "${EXPECTED_VERSION}" ]; then
+                echo "Deployed version matches ${EXPECTED_VERSION}"
+                exit 0
+              fi
+              echo "Attempt ${i}: app healthy but version is ${VERSION}"
+            else
+              echo "Attempt ${i}: app not healthy yet"
+            fi
+            sleep 20
+          done
+
+          echo "Timed out waiting for deployed version ${EXPECTED_VERSION}"
+          exit 1
+
+      - name: Run UI tests (deployed app)
+        env:
+          BASE_URL: ${{ secrets.WEBAPP_BASE_URL }}
+        run: npm run test:ui

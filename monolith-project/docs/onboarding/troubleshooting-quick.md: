@@ -1,0 +1,41 @@
+# Troubleshooting Quick Reference (Top 10)
+
+## 1) `no matching Route53 Hosted Zone found`
+- Cause: zone doesn’t exist in account.
+- Fix: create hosted zone first, or use ALB DNS for non-prod.
+
+## 2) `ERR_CONNECTION_REFUSED` in UI tests
+- Cause: app not running on `127.0.0.1:3000`.
+- Fix: run app first or configure Playwright `webServer`.
+
+## 3) Playwright CI: `.../health is already used`
+- Cause: app started twice (`npm start &` + Playwright `webServer`).
+- Fix: remove manual start/wait from workflow.
+
+## 4) `Cannot find package 'mysql2/promise'`
+- Cause: missing app dependency.
+- Fix: install `mysql2`, commit lockfile, rerun tests.
+
+## 5) EKS node group launch/join failures
+- Cause: node size/subnet/bootstrap mismatch.
+- Fix: adjust instance type/capacity and subnet config, reapply module 02.
+
+## 6) Argo Helm release timeout
+- Cause: insufficient cluster capacity / failed prior release.
+- Fix: increase nodes, replace tainted helm release, reapply module 03.
+
+## 7) Argo app `Unknown` or resources pruned
+- Cause: manifests missing/changed in Git path.
+- Fix: restore manifests in `apps/webapp/k8s`, refresh/sync app.
+
+## 8) Argo sync invalid Deployment (`DB_HOST` as container name)
+- Cause: DB vars put under `containers`, not `env`.
+- Fix: move `DB_*` entries to `containers[0].env`.
+
+## 9) API `503 Database is not configured` or `ETIMEDOUT`
+- Cause: missing DB env, placeholder password, or RDS ingress blocked.
+- Fix: set real secret values, wire env vars, allow MySQL ingress (`3306`) from app network path.
+
+## 10) Destroy fails on VPC/IGW/Subnet dependencies
+- Cause: leftover ELB ENIs / non-default SGs / mapped public IPs.
+- Fix: delete classic ELB and dependent ENIs/SGs, rerun destroy.

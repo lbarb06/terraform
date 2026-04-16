@@ -1,0 +1,21 @@
+{
+  "name": "project1-webapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test:unit": "NODE_ENV=test vitest run tests/unit",
+    "test:ui": "playwright test"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mysql2": "^3.11.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "supertest": "^7.1.1",
+    "vitest": "^3.2.4",
+    "wait-on": "^8.0.1"
+  }
+}

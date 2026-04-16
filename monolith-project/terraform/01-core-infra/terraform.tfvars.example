@@ -1,0 +1,32 @@
+aws_region           = "us-east-1"
+aws_profile          = "admin"
+project_name         = "mywebapp"
+environment          = "dev"
+
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+
+instance_type         = "t3.micro"
+asg_min_size          = 2
+asg_max_size          = 4
+asg_desired_capacity  = 2
+app_port              = 80
+
+db_engine_version     = "8.0"
+db_instance_class     = "db.t4g.micro"
+db_allocated_storage  = 20
+db_name               = "appdb"
+db_username           = "appadmin"
+enable_multi_az_db    = false
+
+enable_https          = false
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+redirect_http_to_https = true
+
+enable_ec2_log_shipping = true
+ec2_log_retention_days  = 14
+
+create_dns_record    = false
+# domain_name        = "app.example.com"
+# route53_zone_name  = "example.com."

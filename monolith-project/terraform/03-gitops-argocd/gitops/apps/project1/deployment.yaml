@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project1-webapp
+  namespace: project1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: project1-webapp
+  template:
+    metadata:
+      labels:
+        app: project1-webapp
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: webapp
+          image: REPLACE_WITH_ECR_IMAGE_URI
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: project1-webapp-config
+                  key: dbHost
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: project1-webapp-config
+                  key: dbPort
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: project1-webapp-config
+                  key: dbName
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: project1-webapp-config
+                  key: dbUser
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: project1-webapp-secrets
+                  key: dbPassword
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project1-webapp
+  namespace: project1
+spec:
+  type: LoadBalancer
+  selector:
+    app: project1-webapp
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: project1-webapp-config
+  namespace: project1
+data:
+  dbHost: REPLACE_WITH_RDS_ENDPOINT
+  dbPort: "3306"
+  dbName: appdb
+  dbUser: appadmin

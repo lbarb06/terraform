@@ -1,0 +1,6 @@
+bucket         = "my-terraform-state-bucket"
+key            = "webapp/dev/terraform.tfstate"
+region         = "us-east-1"
+profile        = "admin"
+encrypt        = true
+use_lockfile   = true

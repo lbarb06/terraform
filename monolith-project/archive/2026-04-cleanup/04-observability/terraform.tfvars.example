@@ -1,0 +1,15 @@
+aws_region            = "us-east-1"
+aws_profile           = "admin"
+project_name          = "project1-observability"
+environment           = "main"
+project_1_state_bucket = "project1-tfstate-example"
+project_1_state_key   = "project1/main/terraform.tfstate"
+project_1_state_region = "us-east-1"
+alarm_email           = "alerts@example.com"
+alarm_actions_enabled = true
+alb_5xx_threshold     = 5
+alb_target_response_time_threshold = 1
+unhealthy_host_threshold = 1
+asg_in_service_threshold = 1
+rds_cpu_threshold     = 80
+rds_free_storage_threshold_bytes = 2147483648

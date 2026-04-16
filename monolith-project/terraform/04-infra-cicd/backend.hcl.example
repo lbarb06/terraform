@@ -1,0 +1,6 @@
+bucket       = "project2-tfstate-example"
+key          = "project2/main/terraform.tfstate"
+region       = "us-east-1"
+profile      = "admin"
+encrypt      = true
+use_lockfile = true
